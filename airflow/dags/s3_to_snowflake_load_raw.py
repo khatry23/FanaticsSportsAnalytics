@@ -1,9 +1,17 @@
 import logging
 import os
+import sys
 from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+
+from pathlib import Path
+
+repo_root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(repo_root))
+
+from alerting.slack_alert import slack_failure_callback  # noqa: E402
 
 
 def load_s3_to_snowflake_raw():
@@ -28,8 +36,9 @@ def load_s3_to_snowflake_raw():
 
 default_args = {
     "owner": "data-eng",
-    "retries": 1,
+    "retries": 2,
     "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": slack_failure_callback,
 }
 
 with DAG(
@@ -37,6 +46,7 @@ with DAG(
     default_args=default_args,
     start_date=datetime(2024, 1, 1),
     schedule_interval=None,
+    dagrun_timeout=timedelta(minutes=45),
     catchup=False,
     tags=["bronze", "snowflake"],
 ) as dag:

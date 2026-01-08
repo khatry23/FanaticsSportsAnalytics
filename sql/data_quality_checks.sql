@@ -22,7 +22,13 @@ select
   datediff('hour', max(inserted_at), current_timestamp()) as hours_since_latest_event
 from SPORTS_CARD_ANALYTICS.RAW.EVENTS;
 
--- Volume anomaly check vs rolling 7-day average (replace threshold as needed)
+-- Freshness violation rows (configured by env vars in Airflow)
+select
+  max(inserted_at) as latest_event_ts
+from SPORTS_CARD_ANALYTICS.RAW.EVENTS
+having datediff('hour', max(inserted_at), current_timestamp()) > __FRESHNESS_ERROR_HOURS__;
+
+-- Volume anomaly check vs rolling 7-day average (configured by env vars in Airflow)
 with daily_counts as (
   select
     date_trunc('day', inserted_at) as event_date,
@@ -36,7 +42,7 @@ with_avg as (
     event_count,
     avg(event_count) over (
       order by event_date
-      rows between 7 preceding and 1 preceding
+      rows between __VOLUME_LOOKBACK_DAYS__ preceding and 1 preceding
     ) as rolling_avg
   from daily_counts
 )
@@ -44,4 +50,4 @@ select *
 from with_avg
 where rolling_avg is not null
   and rolling_avg > 0
-  and abs(event_count - rolling_avg) / rolling_avg > 0.5;
+  and abs(event_count - rolling_avg) / rolling_avg > __VOLUME_ANOMALY_PCT__;

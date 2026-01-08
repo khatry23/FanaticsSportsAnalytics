@@ -83,6 +83,15 @@ Data quality is enforced via dbt tests and source freshness in Airflow:
 
 See `sql/data_quality_checks.sql` for equivalent ad-hoc checks. The Airflow DAG logs the SQL that would be executed in Snowflake.
 
+## Monitoring & Alerting
+See `docs/monitoring.md` for setup and runbook details.
+
+Active checks/alerts:
+- Airflow task failures → Slack webhook
+- dbt run/test failures block the DAG
+- Freshness and volume anomaly checks (logged SQL ready for execution)
+- Lambda ingestion alarms (Errors, Throttles, p95 Duration) via CloudWatch + SNS
+
 ## Example Queries
 See `sql/examples.sql` for sample analytics queries.
 

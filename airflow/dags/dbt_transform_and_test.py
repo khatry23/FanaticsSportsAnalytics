@@ -1,11 +1,17 @@
 import logging
 import os
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
+
+repo_root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(repo_root))
+
+from alerting.slack_alert import slack_failure_callback  # noqa: E402
 
 
 def run_data_quality_checks():
@@ -18,13 +24,29 @@ def run_data_quality_checks():
         return
 
     checks_sql = checks_path.read_text()
+    freshness_error_hours = os.getenv("RAW_EVENTS_FRESHNESS_ERROR_HOURS", "48")
+    volume_pct = os.getenv("VOLUME_ANOMALY_PCT", "0.5")
+    volume_lookback = os.getenv("VOLUME_ANOMALY_LOOKBACK_DAYS", "7")
+
+    checks_sql = (
+        checks_sql.replace("__FRESHNESS_ERROR_HOURS__", freshness_error_hours)
+        .replace("__VOLUME_ANOMALY_PCT__", volume_pct)
+        .replace("__VOLUME_LOOKBACK_DAYS__", volume_lookback)
+    )
+    logger.info(
+        "Data quality check parameters: RAW_EVENTS_FRESHNESS_ERROR_HOURS=%s, VOLUME_ANOMALY_PCT=%s, VOLUME_ANOMALY_LOOKBACK_DAYS=%s",
+        freshness_error_hours,
+        volume_pct,
+        volume_lookback,
+    )
     logger.info("Would execute data quality checks:\n%s", checks_sql)
 
 
 default_args = {
     "owner": "data-eng",
-    "retries": 1,
+    "retries": 2,
     "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": slack_failure_callback,
 }
 
 project_dir = os.getenv("DBT_PROJECT_DIR", str(Path(__file__).resolve().parents[2] / "dbt"))
@@ -35,6 +57,7 @@ with DAG(
     default_args=default_args,
     start_date=datetime(2024, 1, 1),
     schedule_interval=None,
+    dagrun_timeout=timedelta(minutes=90),
     catchup=False,
     tags=["silver", "gold", "dbt"],
 ) as dag:
