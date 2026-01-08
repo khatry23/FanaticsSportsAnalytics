@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: raw
+    database: {{ env_var('SNOWFLAKE_DATABASE', 'SPORTS_CARD_ANALYTICS') }}
+    schema: {{ env_var('SNOWFLAKE_RAW_SCHEMA', 'RAW') }}
+    tables:
+      - name: events
+        description: Raw immutable events from S3 and Postgres backfill.
+        loaded_at_field: inserted_at
+        freshness:
+          warn_after: {count: {{ env_var('RAW_EVENTS_FRESHNESS_WARN_HOURS', '24') }}, period: hour}
+          error_after: {count: {{ env_var('RAW_EVENTS_FRESHNESS_ERROR_HOURS', '48') }}, period: hour}
+        tests:
+          - volume_anomaly:
+              timestamp_column: inserted_at
+              threshold_pct: {{ env_var('VOLUME_ANOMALY_PCT', '0.5') }}
+              lookback_days: {{ env_var('VOLUME_ANOMALY_LOOKBACK_DAYS', '7') }}

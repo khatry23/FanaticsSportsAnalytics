@@ -1,0 +1,78 @@
+version: 2
+
+models:
+  - name: stg_order_created
+    columns:
+      - name: event_id
+        tests:
+          - not_null
+          - unique
+      - name: order_id
+        tests:
+          - not_null
+      - name: quantity
+        tests:
+          - not_null
+          - non_negative
+      - name: price_amount
+        tests:
+          - not_null
+          - non_negative
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['CREATED', 'PAID', 'SHIPPED', 'CANCELLED']
+
+  - name: stg_card_catalog_entry_inserted
+    columns:
+      - name: event_id
+        tests:
+          - not_null
+          - unique
+      - name: sku
+        tests:
+          - not_null
+
+  - name: stg_manufacturing_batch
+    columns:
+      - name: event_id
+        tests:
+          - not_null
+          - unique
+      - name: batch_id
+        tests:
+          - not_null
+      - name: defect_rate_estimate
+        tests:
+          - defect_rate_between_zero_one
+
+  - name: dim_card
+    columns:
+      - name: sku
+        tests:
+          - not_null
+          - unique
+
+  - name: fct_orders
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+      - name: sku
+        tests:
+          - relationships:
+              to: ref('dim_card')
+              field: sku
+
+  - name: fct_batch_performance
+    columns:
+      - name: batch_id
+        tests:
+          - not_null
+          - unique
+      - name: sku
+        tests:
+          - relationships:
+              to: ref('dim_card')
+              field: sku

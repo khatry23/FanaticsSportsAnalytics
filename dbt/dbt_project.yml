@@ -1,0 +1,17 @@
+name: sports_card_analytics
+version: '1.0.0'
+config-version: 2
+
+profile: sports_card_analytics
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+
+models:
+  sports_card_analytics:
+    staging:
+      +schema: silver
+      +materialized: view
+    marts:
+      +schema: gold
+      +materialized: table
