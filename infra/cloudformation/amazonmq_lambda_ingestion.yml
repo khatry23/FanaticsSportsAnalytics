@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: AmazonMQ (RabbitMQ) to Lambda ingestion for S3 bronze landing.
+
+Parameters:
+  BrokerArn:
+    Type: String
+    Description: AmazonMQ broker ARN
+  QueueName:
+    Type: String
+    Description: RabbitMQ queue name
+  BatchSize:
+    Type: Number
+    Default: 100
+    Description: Max number of messages per Lambda invocation
+  LambdaTimeout:
+    Type: Number
+    Default: 30
+  LambdaMemory:
+    Type: Number
+    Default: 256
+  S3Bucket:
+    Type: String
+  S3Prefix:
+    Type: String
+    Default: raw/events
+  LogLevel:
+    Type: String
+    Default: INFO
+  SubnetIds:
+    Type: CommaDelimitedList
+    Description: VPC subnet IDs for Lambda (if needed)
+  SecurityGroupIds:
+    Type: CommaDelimitedList
+    Description: VPC security group IDs for Lambda (if needed)
+
+Resources:
+  IngestionLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: amazonmq-ingestion-lambda-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: amazonmq-ingestion-logs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+        - PolicyName: amazonmq-ingestion-s3
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
+
+  AmazonMqIngestionLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: amazonmq-ingestion-lambda
+      Handler: src.ingestion.lambda_consumer.lambda_handler
+      Runtime: python3.11
+      Role: !GetAtt IngestionLambdaRole.Arn
+      Timeout: !Ref LambdaTimeout
+      MemorySize: !Ref LambdaMemory
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref S3Bucket
+          S3_PREFIX: !Ref S3Prefix
+          LOG_LEVEL: !Ref LogLevel
+      VpcConfig:
+        SubnetIds: !Ref SubnetIds
+        SecurityGroupIds: !Ref SecurityGroupIds
+
+  AmazonMqEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      FunctionName: !Ref AmazonMqIngestionLambda
+      EventSourceArn: !Ref BrokerArn
+      BatchSize: !Ref BatchSize
+      Enabled: true
+      Queues:
+        - !Ref QueueName
+
+Outputs:
+  LambdaArn:
+    Value: !GetAtt AmazonMqIngestionLambda.Arn
+  EventSourceMappingId:
+    Value: !Ref AmazonMqEventSourceMapping

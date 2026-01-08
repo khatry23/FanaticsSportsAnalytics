@@ -1,0 +1,14 @@
+{
+  "messages": [
+    {
+      "data": "eyJldmVudF9pZCI6ICJldnRfMTIzIiwgImV2ZW50X3R5cGUiOiAiT3JkZXJDcmVhdGVkIiwgInNvdXJjZSI6ICJyYWJiaXRtcSIsICJvcmRlcl9pZCI6ICJvcmRlcl8xMjMiLCAib3JkZXJfdHMiOiAiMjAyNC0wMS0wMlQxMjozNDo1NloiLCAiY3VzdG9tZXJfaWQiOiAiY3VzdF80MiIsICJza3UiOiAic2t1Xzk5IiwgInF1YW50aXR5IjogMiwgInByaWNlIjogeyJ1bml0cyI6IDE1OTksICJzY2FsZSI6IDJ9LCAic3RhdHVzIjogIkNSRUFURUQiLCAiaW5zZXJ0ZWRfYXQiOiAiMjAyNC0wMS0wMlQxMjozNDo1NloifQ==",
+      "basicProperties": {
+        "headers": {
+          "source": "rabbitmq",
+          "event_type": "OrderCreated",
+          "inserted_at": "2024-01-02T12:34:56Z"
+        }
+      }
+    }
+  ]
+}

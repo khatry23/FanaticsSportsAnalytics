@@ -17,6 +17,20 @@ Event-driven medallion (Bronze/Silver/Gold) ELT pipeline for sports card analyti
 2) Load S3 raw JSON into Snowflake RAW.EVENTS (Airflow DAG: s3_to_snowflake_load_raw)
 3) Transform and test in dbt (Airflow DAG: dbt_transform_and_test)
 
+## Real-Time Ingestion
+New events from AmazonMQ (RabbitMQ) are ingested by a Lambda trigger and landed in S3 Bronze:
+
+- Lambda handler: `src/ingestion/lambda_consumer.py`
+- CloudFormation template: `infra/cloudformation/amazonmq_lambda_ingestion.yml`
+- Local test harness: `scripts/test_lambda_locally.py` with `tests/fixtures/amazonmq_event.json`
+
+Deploy the trigger by filling in the CloudFormation placeholders (BROKER_ARN, QUEUE_NAME, BATCH_SIZE, VPC settings) and setting the Lambda env vars (S3_BUCKET, S3_PREFIX, LOG_LEVEL).
+
+Local test:
+```
+python scripts/test_lambda_locally.py
+```
+
 ## Configuration
 Copy and edit the env template:
 
